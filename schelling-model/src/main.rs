@@ -1,31 +1,27 @@
 mod agent; 
-use rand::prelude::*;
-use strum::IntoEnumIterator;
-use strum_macros::EnumIter; 
-use agent::{Group, Agent};
+mod app;
+use core::num;
 
-fn generate_agents(num_agents: i16, world_x: f32, world_y: f32) -> Vec<Agent>{
-    let mut rng = rand::rng();
-    let mut agents: Vec<Agent> = Vec::new();
-    for i in 0..num_agents {
-        let group: Group = Group::iter().choose(&mut rng).unwrap();
-        agents.push(
-                    Agent{  group: group, 
-                            x: rng.random_range(0.0..world_x), 
-                            y: rng.random_range(0.0..world_y)}
-                    )
-    }
-    agents
-}
-fn main() {
-    let num_agents: i16 = 1000;
+use rand::prelude::*;
+use app::App;
+use agent::{Group, Agent};
+use eframe::egui;
+
+fn main() -> eframe::Result {
+    let num_agents: u32 = 10;
     let world_x: f32 = 100.0;
     let world_y: f32 = 100.0;
-    let neighborhood_radius: f32 = 0.1;
+    let neighborhood_radius: f32 = 60.0;
     let move_threshold: f32 = 0.5;
 
-    let mut agents: Vec<Agent> = generate_agents(num_agents, world_x, world_y);
-    for agent in agents {
-        println!("{:?}", agent);
-    }
+    // env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
+    let options = eframe::NativeOptions {
+        viewport: egui::ViewportBuilder::default().with_inner_size([1024.0, 768.0]),
+        ..Default::default()
+    };
+    eframe::run_native(
+        "Schelling Simulation",
+        options,
+        Box::new(|cc| Ok(Box::<App>::new(App::new(num_agents, world_x, world_y, neighborhood_radius, move_threshold)))),
+    )
 }
