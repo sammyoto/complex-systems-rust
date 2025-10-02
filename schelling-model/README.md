@@ -1,5 +1,5 @@
 <h1>The Schelling Model</h1>
-<p>The Schelling Model was created by Thomas Schelling in the early 70's. This model tries to simulate how people of different ethnic backgrounds tend to segregate geographically. While this model ignores MANY of the other factors as to why ethnic groups tend to self organize into groups geographically, the algorithm is very simple and provides a good introduction to modeling Agentic Systems.</p>
+<p>The Schelling Model was created by Thomas Schelling in the early 70's. This model tries to simulate how people of different ethnic backgrounds tend to self-segregate geographically. While this model ignores MANY of the other factors as to why ethnic groups tend to self organize into groups geographically, the algorithm is very simple and provides a good introduction to modeling Agentic Systems.</p>
 
 <p>You can run the program by running:</p>
 
