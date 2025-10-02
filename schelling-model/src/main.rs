@@ -8,10 +8,10 @@ use agent::{Group, Agent};
 use eframe::egui;
 
 fn main() -> eframe::Result {
-    let num_agents: u32 = 10;
+    let num_agents: u32 = 100;
     let world_x: f32 = 100.0;
     let world_y: f32 = 100.0;
-    let neighborhood_radius: f32 = 60.0;
+    let neighborhood_radius: f32 = 20.0;
     let move_threshold: f32 = 0.5;
 
     // env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).

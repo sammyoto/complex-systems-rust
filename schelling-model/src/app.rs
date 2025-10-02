@@ -15,8 +15,8 @@ pub struct App {
     neighborhood_radius: f32,
     move_threshold: f32,
     simulation_speed: u64,
-    num_steps: u16,
     is_simulation_active: bool,
+    show_radius: bool,
     last_update: Instant
 }
 
@@ -29,9 +29,9 @@ impl App {
             world_y: world_y,
             neighborhood_radius: neighborhood_radius,
             move_threshold: move_threshold,
-            simulation_speed: 5,
-            num_steps: 100,
+            simulation_speed: 20,
             is_simulation_active: false,
+            show_radius: false,
             last_update: Instant::now()
         }
     }
@@ -102,7 +102,7 @@ impl eframe::App for App {
             ui.horizontal(|ui|
                 {
                     ui.label("Neighborhood Radius");
-                    ui.add(egui::Slider::new(&mut self.neighborhood_radius, 0.0..=10000.0));
+                    ui.add(egui::Slider::new(&mut self.neighborhood_radius, 0.0..=1000.0));
                 }
             );
             ui.horizontal(|ui|
@@ -119,8 +119,8 @@ impl eframe::App for App {
             );
             ui.horizontal(|ui|
                 {
-                    ui.label("Number of Steps");
-                    ui.add(egui::Slider::new(&mut self.num_steps, 0..=10000));
+                    ui.label("Show Neighborhood Radius");
+                    ui.checkbox(&mut self.show_radius, "")
                 }
             );
             ui.horizontal(|ui|
@@ -191,25 +191,25 @@ impl eframe::App for App {
                 // }
 
             // get mouse in plot coordinates
-            // if let Some(pointer) = plot_ui.pointer_coordinate() {
-            //     let radius = self.neighborhood_radius as f64;
+            let radius = self.neighborhood_radius as f64;
 
-            //     // build circle polygon around mouse
-            //     let circle: PlotPoints = (0..100)
-            //         .map(|i| {
-            //             let theta = (i as f64) / 100.0 * std::f64::consts::TAU;
-            //             [pointer.x + radius * theta.cos(),
-            //              pointer.y + radius * theta.sin()]
-            //         })
-            //         .collect::<Vec<_>>()
-            //         .into();
+            // build circle polygon in center of world coordinates
+            if self.show_radius {
+                let circle: PlotPoints = (0..100)
+                .map(|i| {
+                    let theta = (i as f64) / 100.0 * std::f64::consts::TAU;
+                    [(self.world_x as f64 / 2.0) + radius * theta.cos(),
+                     (self.world_y as f64 / 2.0) + radius * theta.sin()]
+                })
+                .collect::<Vec<_>>()
+                .into();
 
-            //     plot_ui.polygon(
-            //         Polygon::new("", circle)
-            //             .fill_color(Color32::from_rgba_premultiplied(100, 150, 255, 64)) // semi-transparent
-            //             .stroke(Stroke::new(1.0, Color32::BLUE)),
-            //     );
-            // }
+                plot_ui.polygon(
+                    Polygon::new("", circle)
+                        .fill_color(Color32::from_rgba_premultiplied(100, 150, 255, 64)) // semi-transparent
+                        .stroke(Stroke::new(1.0, Color32::BLUE)),
+            );
+            };
         });
         });
 
