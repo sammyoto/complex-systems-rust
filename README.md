@@ -13,3 +13,11 @@ Going through some exercises in Introduction to the Modeling and Analysis of Com
 
 <h3>Boids</h3>
 <p> Boids are more complex than the previous two models. Boids (Bird-oids) aim to mimic the motion of flocks of birds or schools of fish.</p>
+
+
+<h3>Future Work</h3>
+<p>If I were to continue working on these models there are a few optimizations I would like to consider:</p>
+<ul>
+    <li>Adding a pre-render compute mode to speed up simulations. This would just render the state of the model after doing all the computation so rendering doesn't slow it down.</li>
+    <li>Fixing the steps per second. Right now steps per second is limited by the rendering loop. In the future I would like to make that more efficient.</li>
+</ul>
