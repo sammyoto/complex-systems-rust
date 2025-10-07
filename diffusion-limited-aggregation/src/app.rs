@@ -5,7 +5,7 @@ use std::{thread};
 use egui::{Stroke};
 use egui_plot::{Plot, PlotPoints, Points, Polygon};
 use std::time::{Instant, Duration};
-use crate::agent::{Agent, Group};
+use crate::agent::{Agent, State};
 
 pub struct App {
     agents: Vec<Agent>,
@@ -13,7 +13,6 @@ pub struct App {
     world_x: f32,
     world_y: f32,
     neighborhood_radius: f32,
-    move_threshold: f32,
     simulation_speed: u64,
     is_simulation_active: bool,
     show_radius: bool,
@@ -21,14 +20,13 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(num_agents: u32, world_x: f32, world_y: f32, neighborhood_radius: f32, move_threshold: f32) -> Self {
+    pub fn new(num_agents: u32, world_x: f32, world_y: f32, neighborhood_radius: f32) -> Self {
         Self {
             agents: Vec::new(),
             num_agents: num_agents,
             world_x: world_x,
             world_y: world_y,
             neighborhood_radius: neighborhood_radius,
-            move_threshold: move_threshold,
             simulation_speed: 20,
             is_simulation_active: false,
             show_radius: false,
@@ -40,9 +38,8 @@ impl App {
         let mut rng = rand::rng();
         let mut agents: Vec<Agent> = Vec::new();
         for i in 0..self.num_agents {
-            let group: Group = Group::iter().choose(&mut rng).unwrap();
             agents.push(
-                        Agent{  group: group, 
+                        Agent{  state: State::Movable, 
                                 x: rng.random_range(0.0..self.world_x), 
                                 y: rng.random_range(0.0..self.world_y)}
                         )
@@ -63,13 +60,20 @@ impl App {
             let agent_index: usize = rng.random_range(0..self.agents.len());
             let selected_agent: &Agent = self.agents.get(agent_index).unwrap();
 
+            // Don't do anything if stationary
+            if selected_agent.state == State::Stationary {
+                return
+            }
+
             // Find that agent's neighbor ratio
             let neighbors: Vec<Agent> = selected_agent.get_neighbors(&self.agents, self.neighborhood_radius);
-            let same_group_ratio: f32 = selected_agent.check_neighbors_group_ratio(&neighbors);
+            let is_stationary_neighbor: bool = selected_agent.check_neighbors_for_stationary(&neighbors);
 
-            // Move to a random location if the ratio is less than the move threshold
-            if same_group_ratio < self.move_threshold {
-                let selected_agent_mut: &mut Agent = self.agents.get_mut(agent_index).unwrap();
+            // Move to a random location if no stationary neighbor
+            let selected_agent_mut: &mut Agent = self.agents.get_mut(agent_index).unwrap();
+            if is_stationary_neighbor {
+                selected_agent_mut.set_state(State::Stationary);
+            } else {
                 selected_agent_mut.move_to_new_location(rng.random_range(0.0..self.world_x), rng.random_range(0.0..self.world_y));
             }
         }
@@ -107,12 +111,6 @@ impl eframe::App for App {
             );
             ui.horizontal(|ui|
                 {
-                    ui.label("Move Threshold");
-                    ui.add(egui::Slider::new(&mut self.move_threshold, 0.0..=1.0));
-                }
-            );
-            ui.horizontal(|ui|
-                {
                     ui.label("Simulation Speed (steps/second)");
                     ui.add(egui::Slider::new(&mut self.simulation_speed, 0..=1000));
                 }
@@ -127,6 +125,7 @@ impl eframe::App for App {
                 {
                 if ui.button("Start/Restart").clicked() {
                     self.generate_agents();
+                    self.agents.push(Agent {state: State::Stationary, x: self.world_x/2.0, y: self.world_y/2.0});
                     self.is_simulation_active = true;
                 };
                 if ui.button("Pause/Unpause").clicked() {
@@ -142,7 +141,7 @@ impl eframe::App for App {
 
         // CENTRAL PANEL
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading("Schelling Simulation");
+            ui.heading("Diffusion Limited Aggregation");
 
             Plot::new("agents_plot")
             .data_aspect(1.0)           // lock aspect ratio so circles stay circles
@@ -161,9 +160,9 @@ impl eframe::App for App {
 
                 for a in &self.agents {
                     let p = [a.x as f64, a.y as f64];
-                    match a.group {
-                        Group::Red => red.push(p),
-                        Group::Blue => blue.push(p),
+                    match a.state {
+                        State::Movable => red.push(p),
+                        State::Stationary => blue.push(p),
                         // Group::Green => green.push(p),
                         // Group::Yellow => yellow.push(p)
                     }
@@ -222,3 +221,4 @@ impl eframe::App for App {
         ctx.request_repaint();
     }
 }
+ 
