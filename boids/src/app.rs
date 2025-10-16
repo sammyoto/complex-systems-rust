@@ -57,20 +57,29 @@ impl App {
         if now - self.last_update >= interval {
             // Change time instance to now
             self.last_update = now;
-            // Get a random agent
-            let mut rng = rand::rng();
-            let agent_index: usize = rng.random_range(0..self.agents.len());
-            let selected_agent: &Agent = self.agents.get(agent_index).unwrap();
 
-            // Find that agent's neighbor ratio
-            let neighbors: Vec<Agent> = selected_agent.get_neighbors(&self.agents, self.neighborhood_radius);
-            let same_group_ratio: f32 = selected_agent.check_neighbors_group_ratio(&neighbors);
 
-            // Move to a random location if the ratio is less than the move threshold
-            if same_group_ratio < self.move_threshold {
-                let selected_agent_mut: &mut Agent = self.agents.get_mut(agent_index).unwrap();
-                selected_agent_mut.move_to_new_location(rng.random_range(0.0..self.world_x), rng.random_range(0.0..self.world_y));
+
+            // FOR EACH AGENT
+            
+            // Find Neighbors center of mass
+            // Find Average Velocity of Neighbors
+            // Find repulsion Vector
+
+            // Find Neighbors
+            for agent in &self.agents {
+                let neighbors: Vec<Agent> = agent.get_neighbors(&self.agents, self.neighborhood_radius);
             }
+
+            // // Find that agent's neighbor ratio
+            // let neighbors: Vec<Agent> = selected_agent.get_neighbors(&self.agents, self.neighborhood_radius);
+            // let same_group_ratio: f32 = selected_agent.check_neighbors_group_ratio(&neighbors);
+
+            // // Move to a random location if the ratio is less than the move threshold
+            // if same_group_ratio < self.move_threshold {
+            //     let selected_agent_mut: &mut Agent = self.agents.get_mut(agent_index).unwrap();
+            //     selected_agent_mut.move_to_new_location(rng.random_range(0.0..self.world_x), rng.random_range(0.0..self.world_y));
+            // }
         }
     }
 }
