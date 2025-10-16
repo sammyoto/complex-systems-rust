@@ -5,7 +5,7 @@ use std::{thread};
 use egui::{Stroke};
 use egui_plot::{Plot, PlotPoints, Points, Polygon};
 use std::time::{Instant, Duration};
-use crate::agent::{Agent, Group};
+use crate::agent::{Agent, Vec2};
 
 pub struct App {
     agents: Vec<Agent>,
@@ -40,9 +40,8 @@ impl App {
         let mut rng = rand::rng();
         let mut agents: Vec<Agent> = Vec::new();
         for i in 0..self.num_agents {
-            let group: Group = Group::iter().choose(&mut rng).unwrap();
             agents.push(
-                        Agent{  group: group, 
+                        Agent{  velocity: Vec2::new(0.0, 0.0), 
                                 x: rng.random_range(0.0..self.world_x), 
                                 y: rng.random_range(0.0..self.world_y)}
                         )
@@ -154,41 +153,18 @@ impl eframe::App for App {
             .include_y(0.0).include_y(self.world_y) // fix Y range
             .show(ui, |plot_ui| {
                 
-                let mut red = vec![];
-                let mut blue = vec![];
-                // let mut green = vec![];
-                // let mut yellow = vec![];
+                let mut agent_points = vec![];
 
                 for a in &self.agents {
                     let p = [a.x as f64, a.y as f64];
-                    match a.group {
-                        Group::Red => red.push(p),
-                        Group::Blue => blue.push(p),
-                        // Group::Green => green.push(p),
-                        // Group::Yellow => yellow.push(p)
-                    }
+                    agent_points.push(p);
                 }
                 
-                if !red.is_empty() {
+                if !agent_points.is_empty() {
                     plot_ui.points(
-                        Points::new("", PlotPoints::from(red)).color(Color32::RED).radius(3.0)
+                        Points::new("", PlotPoints::from(agent_points)).color(Color32::RED).radius(3.0)
                     );
                 }
-                if !blue.is_empty() {
-                    plot_ui.points(
-                        Points::new("", PlotPoints::from(blue)).color(Color32::BLUE).radius(3.0)
-                    );
-                }
-                // if !green.is_empty() {
-                //     plot_ui.points(
-                //         Points::new("", PlotPoints::from(green)).color(Color32::GREEN).radius(3.0)
-                //     );
-                // }
-                // if !yellow.is_empty() {
-                //     plot_ui.points(
-                //         Points::new("", PlotPoints::from(yellow)).color(Color32::YELLOW).radius(3.0)
-                //     );
-                // }
 
             // get mouse in plot coordinates
             let radius = self.neighborhood_radius as f64;

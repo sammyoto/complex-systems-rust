@@ -4,7 +4,7 @@ use core::num;
 
 use rand::prelude::*;
 use app::App;
-use agent::{Group, Agent};
+use agent::{Agent};
 use eframe::egui;
 
 fn main() -> eframe::Result {
