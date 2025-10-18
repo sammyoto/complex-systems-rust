@@ -1,30 +1,20 @@
 use core::num;
+use std::sync::{Arc};
 use strum_macros::EnumIter;
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct Vec2 {
-    pub x: f32,
-    pub y: f32
-}
-
-impl Vec2 {
-    pub fn new(x: f32, y: f32) -> Self{
-        Self{x, y}
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
 pub struct Agent {
-    pub velocity: Vec2,
     pub x: f32,
     pub y: f32,
+    pub vx: f32,
+    pub vy: f32
 }
 
 impl Agent {
     pub fn new(x: f32, y: f32) -> Self {
-        Self {velocity: Vec2::new(0.0, 0.0), x, y}
+        Self {x: x, y: y, vx: 0.0, vy: 0.0}
     }
-    pub fn get_neighbors(&self, agents: &Vec<Agent>, radius: f32) -> Vec<Agent>{
+    pub fn get_neighbors(&self, agents: &Vec<Agent>, radius: Arc<f32>) -> Vec<Agent>{
         let mut neighbors: Vec<Agent> = Vec::new();
         
         for agent in agents {
@@ -35,13 +25,9 @@ impl Agent {
 
         neighbors
     }
-    // return ratio of same group neighbors to total neighbors
-    pub fn check_neighbors_group_ratio(&self, neighbors: &Vec<Agent>) -> f32 {
-        32.0
-    }
-
-    pub fn move_to_new_location(&mut self, x: f32, y: f32) {
-        self.x = x;
-        self.y = y;
+    
+    pub fn update_position(&mut self, move_coeff: f32) {
+        self.x = self.x + (self.vx * move_coeff);
+        self.y = self.y + (self.vy * move_coeff);
     }
 }

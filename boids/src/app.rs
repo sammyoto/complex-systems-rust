@@ -1,38 +1,42 @@
 use eframe::egui::{self, Color32};
-use strum::IntoEnumIterator;
 use rand::prelude::*;
 use std::{thread};
+use std::sync::{Arc};
 use egui::{Stroke};
 use egui_plot::{Plot, PlotPoints, Points, Polygon};
-use std::time::{Instant, Duration};
-use crate::agent::{Agent, Vec2};
+use std::time::{Instant};
+use crate::agent::{Agent};
 
 pub struct App {
-    agents: Vec<Agent>,
+    agents: Arc<Vec<Agent>>,
     num_agents: u32,
     world_x: f32,
     world_y: f32,
     neighborhood_radius: f32,
-    move_threshold: f32,
+    move_coeff: f32,
+    center_of_mass_coeff: f32,
+    average_velocity_coeff: f32,
+    repulsion_coeff: f32,
     simulation_speed: u64,
     is_simulation_active: bool,
-    show_radius: bool,
-    last_update: Instant
+    show_radius: bool
 }
 
 impl App {
-    pub fn new(num_agents: u32, world_x: f32, world_y: f32, neighborhood_radius: f32, move_threshold: f32) -> Self {
+    pub fn new(num_agents: u32, world_x: f32, world_y: f32, neighborhood_radius: f32, move_coeff: f32) -> Self {
         Self {
-            agents: Vec::new(),
+            agents: Arc::new(Vec::new()),
             num_agents: num_agents,
             world_x: world_x,
             world_y: world_y,
             neighborhood_radius: neighborhood_radius,
-            move_threshold: move_threshold,
+            move_coeff: move_coeff,
+            center_of_mass_coeff: 1.0,
+            average_velocity_coeff: 1.0,
+            repulsion_coeff: 40.0,
             simulation_speed: 20,
             is_simulation_active: false,
-            show_radius: false,
-            last_update: Instant::now()
+            show_radius: false
         }
     }
 
@@ -40,47 +44,82 @@ impl App {
         let mut rng = rand::rng();
         let mut agents: Vec<Agent> = Vec::new();
         for i in 0..self.num_agents {
-            agents.push(
-                        Agent{  velocity: Vec2::new(0.0, 0.0), 
-                                x: rng.random_range(0.0..self.world_x), 
-                                y: rng.random_range(0.0..self.world_y)}
-                        )
+            agents.push(Agent::new(rng.random_range(0.0..self.world_x), rng.random_range(0.0..self.world_y)));
         }
-        self.agents = agents;
+        self.agents = Arc::new(agents);
     }
 
     pub fn step(&mut self) {
-        // Check if its a valid time instance to step
-        let now = Instant::now();
-        let interval = Duration::from_millis(1000/self.simulation_speed);
+        let mut handles = vec![];
+        let mut new_velocities: Vec<(f32, f32)> = vec![];
+        let mut new_agents: Vec<Agent> = vec![];
+        let neighborhood_radius_arc = Arc::new(self.neighborhood_radius.clone());
 
-        if now - self.last_update >= interval {
-            // Change time instance to now
-            self.last_update = now;
+        for i in 0..self.agents.len() {
+            let thread_agents = Arc::clone(&self.agents);
+            let thread_neighborhood_radius = Arc::clone(&neighborhood_radius_arc);
+            let center_of_mass_coeff_arc = Arc::new(self.center_of_mass_coeff.clone());
+            let average_velocity_coeff_arc = Arc::new(self.average_velocity_coeff.clone());
+            let repulsion_coeff_arc = Arc::new(self.repulsion_coeff.clone());
 
+            let handle = thread::spawn(move || {
+                // Pick an agent
+                let agent = thread_agents.get(i).unwrap();
+                // Find their neighbors
+                let neighbors = agent.get_neighbors(&thread_agents, thread_neighborhood_radius);
+                // Find center of mass
+                let avgx = thread_agents.iter().map(|a| a.x).sum::<f32>() / thread_agents.len() as f32;
+                let avgy = thread_agents.iter().map(|a| a.y).sum::<f32>() / thread_agents.len() as f32;
+                let center_of_mass_vec = (avgx - agent.x * *center_of_mass_coeff_arc, avgy - agent.y * *center_of_mass_coeff_arc);
+                // Find average velocity
+                let avgVx = thread_agents.iter().map(|a| a.vx).sum::<f32>() / thread_agents.len() as f32;
+                let avgVy = thread_agents.iter().map(|a| a.vy).sum::<f32>() / thread_agents.len() as f32;
+                let average_velocity_vec = (avgVx * *average_velocity_coeff_arc, avgVy * *average_velocity_coeff_arc);
+                // Find repulsion vector
+                let mut repulsion_vecs: Vec<(f32, f32)> = vec![];
+                for neighbor in neighbors {
+                    let mut repulsion: (f32, f32) = (0.0, 0.0);
+                    let dx = agent.x - neighbor.x;
+                    let dy = agent.y - neighbor.y;
+                    let dist_sq = dx * dx + dy * dy;
 
+                    if dist_sq > 0.0 {
+                        let inv_dist = 1.0 / dist_sq.sqrt();
+                        repulsion.0 += dx * inv_dist * *repulsion_coeff_arc;
+                        repulsion.1 += dy * inv_dist * *repulsion_coeff_arc;
+                    }
 
-            // FOR EACH AGENT
-            
-            // Find Neighbors center of mass
-            // Find Average Velocity of Neighbors
-            // Find repulsion Vector
+                    repulsion_vecs.push(repulsion);
+                }
+                let avgRepulsionX = repulsion_vecs.iter().map(|a|a.0).sum::<f32>() / repulsion_vecs.len() as f32;
+                let avgRepulsionY = repulsion_vecs.iter().map(|a|a.1).sum::<f32>() / repulsion_vecs.len() as f32;
+                let average_repulsion_vec = (avgRepulsionX, avgRepulsionY);
+                // Return sum of all vectors
+                let newVx = center_of_mass_vec.0 + average_velocity_vec.0 + average_repulsion_vec.0;
+                let newVy = center_of_mass_vec.1 + average_velocity_vec.1 + average_repulsion_vec.1;
 
-            // Find Neighbors
-            for agent in &self.agents {
-                let neighbors: Vec<Agent> = agent.get_neighbors(&self.agents, self.neighborhood_radius);
-            }
-
-            // // Find that agent's neighbor ratio
-            // let neighbors: Vec<Agent> = selected_agent.get_neighbors(&self.agents, self.neighborhood_radius);
-            // let same_group_ratio: f32 = selected_agent.check_neighbors_group_ratio(&neighbors);
-
-            // // Move to a random location if the ratio is less than the move threshold
-            // if same_group_ratio < self.move_threshold {
-            //     let selected_agent_mut: &mut Agent = self.agents.get_mut(agent_index).unwrap();
-            //     selected_agent_mut.move_to_new_location(rng.random_range(0.0..self.world_x), rng.random_range(0.0..self.world_y));
-            // }
+                (newVx, newVy)
+            });
+            handles.push(handle);
         }
+
+        // join handles and get new velocities
+        for handle in handles {
+            let vel = handle.join().unwrap();
+            new_velocities.push(vel);
+        }
+
+        // make new agents
+        for i in 0..self.agents.len() {
+            let mut agent = self.agents[i].clone();
+            agent.vx = new_velocities[i].0;
+            agent.vy = new_velocities[i].1;
+            agent.update_position(self.move_coeff);
+            new_agents.push(agent);
+        }
+
+        // replace old agents with new
+        self.agents = Arc::new(new_agents);
     }
 }
 
@@ -115,14 +154,26 @@ impl eframe::App for App {
             );
             ui.horizontal(|ui|
                 {
-                    ui.label("Move Threshold");
-                    ui.add(egui::Slider::new(&mut self.move_threshold, 0.0..=1.0));
+                    ui.label("Move Coefficient");
+                    ui.add(egui::Slider::new(&mut self.move_coeff, 0.0..=1.0));
                 }
             );
             ui.horizontal(|ui|
                 {
-                    ui.label("Simulation Speed (steps/second)");
-                    ui.add(egui::Slider::new(&mut self.simulation_speed, 0..=1000));
+                    ui.label("Center of Mass Coefficient");
+                    ui.add(egui::Slider::new(&mut self.center_of_mass_coeff, 0.0..=1.0));
+                }
+            );
+            ui.horizontal(|ui|
+                {
+                    ui.label("Average Velocity Coefficient");
+                    ui.add(egui::Slider::new(&mut self.average_velocity_coeff, 0.0..=1.0));
+                }
+            );
+            ui.horizontal(|ui|
+                {
+                    ui.label("Repulsion Coefficient");
+                    ui.add(egui::Slider::new(&mut self.repulsion_coeff, 0.0..=100.0));
                 }
             );
             ui.horizontal(|ui|
@@ -164,7 +215,7 @@ impl eframe::App for App {
                 
                 let mut agent_points = vec![];
 
-                for a in &self.agents {
+                for a in self.agents.as_ref().iter() {
                     let p = [a.x as f64, a.y as f64];
                     agent_points.push(p);
                 }

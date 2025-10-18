@@ -12,7 +12,7 @@ fn main() -> eframe::Result {
     let world_x: f32 = 100.0;
     let world_y: f32 = 100.0;
     let neighborhood_radius: f32 = 20.0;
-    let move_threshold: f32 = 0.5;
+    let move_coeff: f32 = 0.05;
 
     // env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
     let options = eframe::NativeOptions {
@@ -22,7 +22,7 @@ fn main() -> eframe::Result {
     eframe::run_native(
         "Boids",
         options,
-        Box::new(|cc| Ok(Box::<App>::new(App::new(num_agents, world_x, world_y, neighborhood_radius, move_threshold)))),
+        Box::new(|cc| Ok(Box::<App>::new(App::new(num_agents, world_x, world_y, neighborhood_radius, move_coeff)))),
     )
 }
 
